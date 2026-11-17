@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0d14" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>TikLive Mobile</title>
+  <style>
+    :root { --bg:#0b0d14; --panel:#141824; --card:#1d2233; --border:#2c334a; --primary:#fe2c55; --cyan:#25f4ee; --indigo:#6366f1; --green:#10b981; --text:#f3f4f6; --muted:#9ca3af; }
+    * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',system-ui,sans-serif; -webkit-tap-highlight-color:transparent; }
+    body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; padding-top:58px; padding-bottom:72px; }
+    .topbar { position:fixed; top:0; left:0; right:0; height:58px; background:rgba(20,24,36,0.96); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 14px; z-index:100; }
+    .brand { font-weight:800; font-size:1.05rem; display:flex; align-items:center; gap:6px; }
+    .brand span { background:linear-gradient(90deg,var(--cyan),var(--primary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .audio-pill { background:#272c3d; border:1px solid var(--border); color:#fbbf24; padding:6px 10px; border-radius:99px; font-size:0.74rem; font-weight:700; cursor:pointer; }
+    .audio-pill.active { background:rgba(16,185,129,0.2); border-color:var(--green); color:#34d399; }
+    .page { display:none; padding:14px; flex-direction:column; gap:12px; }
+    .page.active { display:flex; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .card-title { font-size:0.88rem; font-weight:700; color:var(--cyan); display:flex; justify-content:space-between; align-items:center; }
+    input, select, textarea { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:11px 12px; font-size:0.92rem; outline:none; }
+    .btn { padding:12px 14px; border-radius:10px; border:none; font-weight:700; font-size:0.9rem; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+    .btn:active { transform:scale(0.97); }
+    .btn-primary { background:var(--primary); } .btn-cyan { background:var(--cyan); color:#090b10; }
+    .btn-indigo { background:var(--indigo); } .btn-green { background:var(--green); }
+    .btn-secondary { background:var(--card); border:1px solid var(--border); }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .stat-box { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 12px; }
+    .stat-box small { font-size:0.72rem; color:var(--muted); }
+    .stat-box div { font-size:1.25rem; font-weight:800; margin-top:2px; }
+    .status-badge { font-size:0.72rem; padding:3px 9px; border-radius:99px; background:#27272a; color:var(--muted); }
+    .status-badge.online { background:rgba(16,185,129,0.2); color:#34d399; }
+    .pad-btn { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 8px; color:var(--text); font-weight:700; font-size:0.85rem; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; }
+    .pad-btn span { font-size:1.5rem; }
+    .pad-btn:active { background:var(--indigo); transform:scale(0.96); }
+    .feed-list { max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:7px; }
+    .feed-item { background:var(--card); padding:9px 11px; border-radius:9px; font-size:0.84rem; border-left:3px solid var(--border); }
+    .feed-item.gift { border-left-color:var(--primary); background:rgba(254,44,85,0.12); }
+    .feed-item.follow { border-left-color:var(--cyan); }
+    .feed-item.sys { border-left-color:#f59e0b; color:#fcd34d; }
+    .switch-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:0.88rem; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .switch-row input[type="checkbox"] { width:20px; height:20px; accent-color:var(--cyan); }
+    .bottom-nav { position:fixed; bottom:0; left:0; right:0; height:66px; background:rgba(20,24,36,0.98); border-top:1px solid var(--border); display:grid; grid-template-columns:repeat(4,1fr); z-index:100; }
+    .nav-btn { background:transparent; border:none; color:var(--muted); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:0.72rem; font-weight:600; cursor:pointer; }
+    .nav-btn .ico { font-size:1.25rem; }
+    .nav-btn.active { color:var(--cyan); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">⚡ <span>TikLive Mobile</span></div>
+    <button class="audio-pill" id="btnUnlockAudio">🔇 Aktifkan Suara</button>
+  </header>
+  <section class="page active" id="pageLive">
+    <div class="card">
+      <div class="card-title"><span>🔌 Koneksi TikTok Live</span><span class="status-badge" id="mConnStatus">OFFLINE</span></div>
+      <input type="text" id="mUsername" placeholder="Masukkan @username_tiktok">
+      <div class="grid-2"><button class="btn btn-primary" id="mBtnConnect">Hubungkan</button><button class="btn btn-secondary" id="mBtnDisconnect">Putus</button></div>
+    </div>
+    <div class="grid-2">
+      <div class="stat-box"><small>👀 Penonton</small><div id="mViewers">0</div></div>
+      <div class="stat-box"><small>❤️ Total Likes</small><div id="mLikes">0</div></div>
+      <div class="stat-box"><small>➕ Followers</small><div id="mFollowers">0</div></div>
+      <div class="stat-box"><small>💎 Diamonds</small><div id="mDiamonds">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>💬 Live Chat & Log</span><button class="btn btn-secondary" style="padding:4px 10px;font-size:0.74rem;" onclick="document.getElementById('mFeed').innerHTML=''">Hapus</button></div>
+      <div class="feed-list" id="mFeed"></div>
+    </div>
+  </section>
+  <section class="page" id="pagePad">
+    <div class="card">
+      <div class="card-title">🎛️ Soundboard Cepat</div>
+      <div class="grid-3">
+        <button class="pad-btn" onclick="playSound('coin')"><span>🪙</span>Coin</button>
+        <button class="pad-btn" onclick="playSound('chime')"><span>🔔</span>Chime</button>
+        <button class="pad-btn" onclick="playSound('airhorn')"><span>📢</span>Airhorn</button>
+        <button class="pad-btn" onclick="playSound('sad')"><span>🎺</span>Sad</button>
+        <button class="pad-btn" onclick="playSound('fanfare')"><span>🎉</span>Win!</button>
+        <button class="pad-btn" onclick="playSound('laser')"><span>⚡</span>Laser</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🧪 Simulator Event (Tes di HP)</div>
+      <div class="grid-2">
+        <button class="pad-btn" onclick="simChat()"><span>💬</span>Tes Chat</button>
+        <button class="pad-btn" onclick="simFollow()"><span>➕</span>Tes Follow</button>
+        <button class="pad-btn" onclick="simGift('Rose',1)"><span>🌹</span>Gift Rose</button>
+        <button class="pad-btn" onclick="simGift('GG',10)"><span>🎮</span>Gift GG (Spin)</button>
+        <button class="pad-btn" onclick="simGift('Lion',29999)"><span>🦁</span>Gift Lion</button>
+        <button class="pad-btn" onclick="simLike()"><span>❤️</span>+50 Likes</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;"><input type="text" id="mSimChat" placeholder="Ketik chat (misal: !1)"><button class="btn btn-cyan" onclick="simCustomChat()">Kirim</button></div>
+    </div>
+  </section>
+  <section class="page" id="pageTools">
+    <div class="card"><div class="card-title">🎡 Roda Keberuntungan</div><button class="btn btn-primary" onclick="emitEvent('manual-spin')">🎡 PUTAR RODA SEKARANG!</button></div>
+    <div class="card">
+      <div class="card-title"><span>⏱️ Subathon Timer</span><span id="mTimerVal" style="font-size:1.1rem;color:#fff;">05:00</span></div>
+      <div class="grid-3"><button class="btn btn-green" onclick="emitEvent('timer-control',{action:'start'})">▶ Mulai</button><button class="btn btn-secondary" onclick="emitEvent('timer-control',{action:'pause'})">⏸ Jeda</button><button class="btn btn-secondary" onclick="emitEvent('timer-control',{action:'reset',value:300})">↺ 5m</button></div>
+      <div class="grid-2"><button class="btn btn-secondary" onclick="emitEvent('timer-control',{action:'add',value:60})">+1 Menit</button><button class="btn btn-secondary" onclick="emitEvent('timer-control',{action:'add',value:300})">+5 Menit</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Live Chat Polling (!1, !2, !3)</div>
+      <input type="text" id="mPollQ" value="Main game apa selanjutnya?">
+      <input type="text" id="mPollOpts" value="Mobile Legends, PUBG Mobile, Valorant">
+      <div class="grid-2"><button class="btn btn-green" onclick="startPoll()">▶ Mulai Poll</button><button class="btn btn-primary" onclick="emitEvent('poll-control',{action:'stop'})">⏹ Tutup</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🗣️ Pengaturan Suara (TTS)</div>
+      <label class="switch-row"><span>Aktifkan Suara Chat (TTS)</span><input type="checkbox" id="mTtsEnabled" checked onchange="saveMobileTts()"></label>
+      <label class="switch-row"><span>Bacakan Terima Kasih Gift</span><input type="checkbox" id="mTtsGifts" checked onchange="saveMobileTts()"></label>
+    </div>
+  </section>
+  <section class="page" id="pageOverlay">
+    <div class="card">
+      <div class="card-title">📺 URL Overlay untuk Stream HP</div>
+      <input type="text" id="mOverlayUrl" readonly>
+      <div class="grid-2"><button class="btn btn-cyan" onclick="copyMobileOverlay()">📋 Salin Link 9:16</button><a href="/overlay.html?mode=mobile" target="_blank" class="btn btn-indigo" style="text-decoration:none;">👁️ Buka Overlay</a></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🧩 Tampilkan Widget di Layar</div>
+      <label class="switch-row"><span>Alert Gift & Follow</span><input type="checkbox" class="m-widget" data-key="showAlerts" checked></label>
+      <label class="switch-row"><span>Target Goal Bar</span><input type="checkbox" class="m-widget" data-key="showGoals" checked></label>
+      <label class="switch-row"><span>Subathon Timer</span><input type="checkbox" class="m-widget" data-key="showTimer" checked></label>
+      <label class="switch-row"><span>Top Gifters</span><input type="checkbox" class="m-widget" data-key="showLeaderboard" checked></label>
+      <label class="switch-row"><span>Live Chat Box</span><input type="checkbox" class="m-widget" data-key="showChat" checked></label>
+      <label class="switch-row"><span>Widget Polling</span><input type="checkbox" class="m-widget" data-key="showPoll" checked></label>
+    </div>
+  </section>
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('pageLive',this)"><span class="ico">📡</span><span>Live</span></button>
+    <button class="nav-btn" onclick="switchTab('pagePad',this)"><span class="ico">🎛️</span><span>Sound/Sim</span></button>
+    <button class="nav-btn" onclick="switchTab('pageTools',this)"><span class="ico">🎡</span><span>Fitur</span></button>
+    <button class="nav-btn" onclick="switchTab('pageOverlay',this)"><span class="ico">📺</span><span>Overlay</span></button>
+  </nav>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    window.switchTab = function(pageId, btn) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      btn.classList.add('active');
+    };
+    let audioUnlocked = false, actx = null;
+    const unlockBtn = document.getElementById('btnUnlockAudio');
+    unlockBtn.addEventListener('click', function() {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!actx) actx = new AudioCtx();
+      if (actx.state === 'suspended') actx.resume();
+      if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+      audioUnlocked = true; unlockBtn.textContent = '🔊 Suara Aktif'; unlockBtn.classList.add('active');
+    });
+    function addFeed(html, cls) {
+      const box = document.getElementById('mFeed'), d = document.createElement('div');
+      d.className = 'feed-item ' + (cls || ''); d.innerHTML = html; box.prepend(d);
+      if (box.children.length > 50) box.lastChild.remove();
+    }
+    function formatTimer(sec) {
+      return Math.floor(sec/60).toString().padStart(2,'0') + ':' + (sec%60).toString().padStart(2,'0');
+    }
+    function playSynthSound(name) {
+      if (!audioUnlocked || !actx) return;
+      const now = actx.currentTime, osc = actx.createOscillator(), gain = actx.createGain();
+      osc.connect(gain); gain.connect(actx.destination);
+      if (name === 'coin') { osc.type='sine'; osc.frequency.setValueAtTime(987,now); osc.frequency.setValueAtTime(1318,now+0.08); gain.gain.setValueAtTime(0.25,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.35); osc.start(now); osc.stop(now+0.35); }
+      else if (name === 'chime') { osc.type='triangle'; osc.frequency.setValueAtTime(523,now); osc.frequency.setValueAtTime(659,now+0.1); osc.frequency.setValueAtTime(784,now+0.2); gain.gain.setValueAtTime(0.25,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.5); osc.start(now); osc.stop(now+0.5); }
+      else if (name === 'airhorn') { osc.type='sawtooth'; osc.frequency.setValueAtTime(220,now); gain.gain.setValueAtTime(0.25,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.5); osc.start(now); osc.stop(now+0.5); }
+      else if (name === 'sad') { osc.type='sawtooth'; osc.frequency.setValueAtTime(300,now); osc.frequency.setValueAtTime(250,now+0.4); gain.gain.setValueAtTime(0.2,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.85); osc.start(now); osc.stop(now+0.85); }
+      else if (name === 'fanfare') { osc.type='square'; osc.frequency.setValueAtTime(523,now); osc.frequency.setValueAtTime(784,now+0.2); osc.frequency.setValueAtTime(1046,now+0.35); gain.gain.setValueAtTime(0.18,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.75); osc.start(now); osc.stop(now+0.75); }
+      else { osc.type='sawtooth'; osc.frequency.setValueAtTime(900,now); osc.frequency.exponentialRampToValueAtTime(150,now+0.25); gain.gain.setValueAtTime(0.2,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.26); osc.start(now); osc.stop(now+0.26); }
+    }
+    let socket = null;
+    if (typeof io === 'undefined') { addFeed('❌ Socket.IO gagal dimuat!', 'sys'); }
+    else {
+      socket = io();
+      socket.on('connect', () => addFeed('🟢 Terhubung ke server lokal!', 'sys'));
+      socket.on('state-sync', s => {
+        const pill = document.getElementById('mConnStatus');
+        pill.textContent = s.connected ? ('LIVE @' + s.username) : 'OFFLINE';
+        pill.className = 'status-badge ' + (s.connected ? 'online' : '');
+        document.getElementById('mViewers').textContent = s.stats.viewers.toLocaleString();
+        document.getElementById('mLikes').textContent = s.stats.likes.toLocaleString();
+        document.getElementById('mFollowers').textContent = s.stats.followers.toLocaleString();
+        document.getElementById('mDiamonds').textContent = s.stats.diamonds.toLocaleString();
+        document.getElementById('mTimerVal').textContent = formatTimer(s.timer.seconds);
+      });
+      socket.on('timer-tick', t => { document.getElementById('mTimerVal').textContent = formatTimer(t.seconds); });
+      socket.on('tiktok-chat', d => addFeed('<b>' + d.nickname + ':</b> ' + d.comment));
+      socket.on('tiktok-gift', d => addFeed('🎁 <b>' + d.nickname + '</b> kirim ' + d.count + 'x ' + d.giftName + ' (+' + d.diamonds + '💎)', 'gift'));
+      socket.on('tiktok-follow', d => addFeed('➕ <b>' + d.nickname + '</b> follow!', 'follow'));
+      socket.on('system-log', d => addFeed(d.msg, 'sys'));
+      socket.on('play-sound', ({ sound }) => playSynthSound(sound));
+      socket.on('tts-speak', ({ text }) => {
+        if (!audioUnlocked || !('speechSynthesis' in window)) return;
+        const u = new SpeechSynthesisUtterance(text); u.lang = 'id-ID'; window.speechSynthesis.speak(u);
+      });
+    }
+    window.emitEvent = function(ev, data) { if (socket) socket.emit(ev, data); };
+    document.getElementById('mBtnConnect').onclick = () => emitEvent('connect-tiktok', { username: document.getElementById('mUsername').value });
+    document.getElementById('mBtnDisconnect').onclick = () => emitEvent('disconnect-tiktok');
+    const mobileOverlayUrl = location.origin + '/overlay.html?mode=mobile';
+    document.getElementById('mOverlayUrl').value = mobileOverlayUrl;
+    window.copyMobileOverlay = () => { navigator.clipboard.writeText(mobileOverlayUrl); alert('Link Overlay 9:16 disalin!'); };
+    document.querySelectorAll('.m-widget').forEach(cb => cb.addEventListener('change', () => {
+      const overlayWidgets = {}; document.querySelectorAll('.m-widget').forEach(x => overlayWidgets[x.dataset.key] = x.checked);
+      emitEvent('update-settings', { overlayWidgets });
+    }));
+    window.saveMobileTts = () => emitEvent('update-settings', { tts: { enabled: document.getElementById('mTtsEnabled').checked, readGifts: document.getElementById('mTtsGifts').checked } });
+    window.startPoll = () => emitEvent('poll-control', { action: 'start', question: document.getElementById('mPollQ').value.trim(), options: document.getElementById('mPollOpts').value.split(',').map(s => s.trim()).filter(Boolean) });
+    window.playSound = sound => emitEvent('play-sound', { sound });
+    const users = ['Andi_Live', 'Siti_Kawaii', 'BudiPro', 'Sultan_JKT', 'RinaGamer'];
+    const uPick = () => users[Math.floor(Math.random() * users.length)];
+    window.simChat = () => { const u = uPick(); emitEvent('simulate-event', { type: 'chat', data: { uniqueId: u, nickname: u, comment: 'Halo kak semangat live nya!' } }); };
+    window.simCustomChat = () => { const inp = document.getElementById('mSimChat'); if (!inp.value.trim()) return; const u = uPick(); emitEvent('simulate-event', { type: 'chat', data: { uniqueId: u, nickname: u, comment: inp.value.trim() } }); inp.value = ''; };
+    window.simFollow = () => { const u = uPick(); emitEvent('simulate-event', { type: 'follow', data: { uniqueId: u, nickname: u } }); };
+    window.simGift = (giftName, diamondCount) => { const u = uPick(); emitEvent('simulate-event', { type: 'gift', data: { uniqueId: u, nickname: u, giftName, diamondCount, repeatCount: 1, giftType: 0 } }); };
+    window.simLike = () => emitEvent('simulate-event', { type: 'like', data: { uniqueId: uPick(), likeCount: 50 } });
+  </script>
+</body>
+</html>

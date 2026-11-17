@@ -1,0 +1,15 @@
+{
+  "name": "TikLive Studio Mobile",
+  "short_name": "TikLive",
+  "start_url": "/mobile.html",
+  "display": "standalone",
+  "background_color": "#0b0d14",
+  "theme_color": "#0b0d14",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3046/3046121.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

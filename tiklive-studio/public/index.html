@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikLive Studio — Dashboard Interaktif TikTok Live</title>
+  <style>
+    :root {
+      --bg: #0b0d14;
+      --panel: #131722;
+      --card: #1b2030;
+      --border: #2a3146;
+      --primary: #fe2c55; /* TikTok Red-Pink */
+      --cyan: #25f4ee;
+      --indigo: #6366f1;
+      --green: #10b981;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2rem; }
+    .brand span { background: linear-gradient(90deg, var(--cyan), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .conn-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .status-pill { padding: 5px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; background: #27272a; color: var(--muted); }
+    .status-pill.online { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
+
+    input, select, textarea {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--cyan); }
+
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.84rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-cyan { background: var(--cyan); color: #090b10; }
+    .btn-indigo { background: var(--indigo); color: #fff; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #252b40; }
+
+    /* Stats Bar */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      padding: 16px 20px 0;
+    }
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stat-label { font-size: 0.78rem; color: var(--muted); }
+    .stat-val { font-size: 1.4rem; font-weight: 800; margin-top: 2px; }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr 380px;
+      gap: 16px;
+      padding: 16px 20px 24px;
+      flex: 1;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .card-header {
+      padding: 11px 15px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.02);
+    }
+    .card-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+    .feed-box {
+      height: 290px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.84rem;
+    }
+    .feed-item {
+      background: var(--card);
+      padding: 7px 10px;
+      border-radius: 6px;
+      border-left: 3px solid var(--border);
+      line-height: 1.35;
+    }
+    .feed-item.gift { border-left-color: var(--primary); background: rgba(254,44,85,0.1); }
+    .feed-item.follow { border-left-color: var(--cyan); }
+    .feed-item.sys { border-left-color: #f59e0b; color: #fcd34d; }
+
+    .sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .sound-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+    .row { display: flex; gap: 8px; align-items: center; }
+    .col { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    label { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
+
+    .obs-box {
+      background: rgba(37, 244, 238, 0.08);
+      border: 1px dashed var(--cyan);
+      padding: 10px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+    }
+
+    .rule-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+    }
+
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--card); }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.82rem;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); background: var(--panel); }
+    .tab-content { display: none; }
+    .tab-content.active { display: flex; flex-direction: column; gap: 10px; }
+
+    @media (max-width: 1150px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">⚡ <span>TikLive Studio</span> <small style="font-size:0.72rem; color:var(--muted);">v2.0</small></div>
+
+    <div class="conn-bar">
+      <span class="status-pill" id="connStatus">OFFLINE</span>
+      <input type="text" id="tiktokUsername" placeholder="@username_tiktok" style="width:180px;">
+      <button class="btn btn-primary" id="btnConnect">🔌 Hubungkan Live</button>
+      <button class="btn btn-secondary" id="btnDisconnect">Putus</button>
+      <label style="display:flex; align-items:center; gap:5px; margin-left:8px; cursor:pointer;">
+        <input type="checkbox" id="dashAudioEnable" checked> 🔊 Suara di Dashboard
+      </label>
+    </div>
+  </header>
+
+  <!-- STATISTIK LIVE -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div><div class="stat-label">Penonton Live</div><div class="stat-val" id="statViewers">0</div></div>
+      <span style="font-size:1.6rem;">👀</span>
+    </div>
+    <div class="stat-card">
+      <div><div class="stat-label">Total Likes</div><div class="stat-val" id="statLikes">0</div></div>
+      <span style="font-size:1.6rem;">❤️</span>
+    </div>
+    <div class="stat-card">
+      <div><div class="stat-label">Follower Baru</div><div class="stat-val" id="statFollowers">0</div></div>
+      <span style="font-size:1.6rem;">➕</span>
+    </div>
+    <div class="stat-card">
+      <div><div class="stat-label">Total Diamonds</div><div class="stat-val" id="statDiamonds">0</div></div>
+      <span style="font-size:1.6rem;">💎</span>
+    </div>
+    <div class="stat-card">
+      <div><div class="stat-label">Subathon Timer</div><div class="stat-val" id="statTimer" style="color:var(--cyan);">05:00</div></div>
+      <button class="btn btn-secondary" onclick="socket.emit('reset-stats')" style="padding:5px 8px; font-size:0.74rem;">Reset Stats</button>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- KOLOM KIRI: OBS URL, Simulator & Soundboard -->
+    <div>
+      <div class="card">
+        <div class="card-header">📺 URL Overlay OBS / Live Studio</div>
+        <div class="card-body">
+          <div class="obs-box">
+            <code id="obsUrlText" style="color:var(--cyan); word-break:break-all;">http://localhost:3000/overlay.html</code>
+            <button class="btn btn-cyan" id="btnCopyObs" style="padding:5px 10px; font-size:0.76rem;">Salin</button>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.78rem;">
+            <label><input type="checkbox" class="widget-toggle" data-key="showAlerts" checked> Alert Gift/Follow</label>
+            <label><input type="checkbox" class="widget-toggle" data-key="showGoals" checked> Target Goal Bar</label>
+            <label><input type="checkbox" class="widget-toggle" data-key="showTimer" checked> Subathon Timer</label>
+            <label><input type="checkbox" class="widget-toggle" data-key="showLeaderboard" checked> Top Gifters</label>
+            <label><input type="checkbox" class="widget-toggle" data-key="showChat" checked> Live Chat Box</label>
+            <label><input type="checkbox" class="widget-toggle" data-key="showPoll" checked> Widget Polling</label>
+          </div>
+          <a href="/overlay.html" target="_blank" class="btn btn-secondary" style="text-align:center; justify-content:center; text-decoration:none;">👁️ Buka Preview Overlay di Tab Baru</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">🧪 Simulator Event (Tes Tanpa Live)</div>
+        <div class="card-body">
+          <div class="sim-grid">
+            <button class="btn btn-secondary" onclick="simChat()">💬 Tes Chat</button>
+            <button class="btn btn-secondary" onclick="simFollow()">➕ Tes Follow</button>
+            <button class="btn btn-primary" onclick="simGift('Rose', 1)">🌹 Gift Rose (1💎)</button>
+            <button class="btn btn-primary" onclick="simGift('GG', 10)">🎮 Gift GG (Spin!)</button>
+            <button class="btn btn-indigo" onclick="simGift('Lion', 29999)">🦁 Gift Lion</button>
+            <button class="btn btn-secondary" onclick="simLike()">❤️ +50 Likes</button>
+          </div>
+          <div class="row">
+            <input type="text" id="simCustomChat" placeholder="Ketik komentar simulasi (misal: !1)" style="flex:1;">
+            <button class="btn btn-cyan" onclick="simCustomChat()">Kirim</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">🎛️ Manual Soundboard</div>
+        <div class="card-body">
+          <div class="sound-grid">
+            <button class="btn btn-secondary" onclick="playSound('coin')">🪙 Coin</button>
+            <button class="btn btn-secondary" onclick="playSound('chime')">🔔 Chime</button>
+            <button class="btn btn-secondary" onclick="playSound('airhorn')">📢 Airhorn</button>
+            <button class="btn btn-secondary" onclick="playSound('sad')">🎺 Sad</button>
+            <button class="btn btn-secondary" onclick="playSound('fanfare')">🎉 Win!</button>
+            <button class="btn btn-secondary" onclick="playSound('laser')">⚡ Laser</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KOLOM TENGAH: Live Feed & Custom Rules -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span>📡 Live Activity Feed</span>
+          <button class="btn btn-secondary" onclick="document.getElementById('liveFeed').innerHTML=''" style="padding:3px 8px; font-size:0.74rem;">Bersihkan</button>
+        </div>
+        <div class="card-body">
+          <div class="feed-box" id="liveFeed"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">⚙️ Aksi Otomatis (Rules)</div>
+        <div class="card-body">
+          <div class="row">
+            <select id="ruleEvent">
+              <option value="gift">Saat Gift</option>
+              <option value="follow">Saat Follow</option>
+              <option value="share">Saat Share</option>
+            </select>
+            <input type="text" id="ruleMatch" placeholder="Nama Gift / *" value="*" style="width:100px;">
+            <select id="ruleAction">
+              <option value="sound">Putar Suara</option>
+              <option value="spin">Putar Spin Wheel</option>
+              <option value="addTimer">Tambah Timer (+dtk)</option>
+            </select>
+            <input type="text" id="ruleValue" placeholder="coin / 30" value="coin" style="width:90px;">
+            <button class="btn btn-green" id="btnAddRule">+ Tambah</button>
+          </div>
+          <div id="rulesList" style="display:flex; flex-direction:column; gap:6px; max-height:170px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KOLOM KANAN: Tab Fitur (TTS, Wheel, Timer, Poll, Goals) -->
+    <div>
+      <div class="card">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="tabTts">🗣️ TTS</button>
+          <button class="tab-btn" data-tab="tabWheel">🎡 Wheel</button>
+          <button class="tab-btn" data-tab="tabTimer">⏱️ Timer</button>
+          <button class="tab-btn" data-tab="tabPoll">📊 Poll</button>
+          <button class="tab-btn" data-tab="tabGoals">🎯 Goals</button>
+        </div>
+
+        <div class="card-body">
+          <!-- TAB TTS -->
+          <div class="tab-content active" id="tabTts">
+            <label><input type="checkbox" id="ttsEnabled" checked> Aktifkan Text-to-Speech (Suara Chat)</label>
+            <label><input type="checkbox" id="ttsReadGifts" checked> Bacakan Terima Kasih Gift</label>
+            <div class="col">
+              <label>Mode Pembacaan Chat</label>
+              <select id="ttsMode">
+                <option value="all">Semua Komentar Chat</option>
+                <option value="command">Hanya yang diawali perintah (!tts)</option>
+              </select>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label>Prefix Perintah</label>
+                <input type="text" id="ttsPrefix" value="!tts">
+              </div>
+              <div class="col">
+                <label>Cooldown (detik)</label>
+                <input type="number" id="ttsCooldown" value="3" min="0">
+              </div>
+            </div>
+            <button class="btn btn-indigo" onclick="saveSettings()">💾 Simpan Pengaturan TTS</button>
+          </div>
+
+          <!-- TAB SPIN WHEEL -->
+          <div class="tab-content" id="tabWheel">
+            <div class="col">
+              <label>Daftar Hadiah / Tantangan (1 baris = 1 item)</label>
+              <textarea id="wheelItems" rows="6"></textarea>
+            </div>
+            <div class="col">
+              <label>Trigger Otomatis via Nama Gift (contoh: Rose / GG)</label>
+              <input type="text" id="wheelTriggerGift" value="Rose">
+            </div>
+            <div class="row">
+              <button class="btn btn-indigo" style="flex:1;" onclick="saveSettings()">💾 Simpan Wheel</button>
+              <button class="btn btn-primary" style="flex:1;" onclick="socket.emit('manual-spin')">🎡 Putar Sekarang!</button>
+            </div>
+          </div>
+
+          <!-- TAB TIMER -->
+          <div class="tab-content" id="tabTimer">
+            <div class="row">
+              <button class="btn btn-green" style="flex:1;" onclick="socket.emit('timer-control',{action:'start'})">▶ Mulai</button>
+              <button class="btn btn-secondary" style="flex:1;" onclick="socket.emit('timer-control',{action:'pause'})">⏸ Jeda</button>
+              <button class="btn btn-secondary" onclick="socket.emit('timer-control',{action:'reset', value:300})">↺ 5m</button>
+            </div>
+            <div class="row">
+              <button class="btn btn-secondary" style="flex:1;" onclick="socket.emit('timer-control',{action:'add', value:60})">+1 Menit</button>
+              <button class="btn btn-secondary" style="flex:1;" onclick="socket.emit('timer-control',{action:'add', value:300})">+5 Menit</button>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label>+Detik per Follow</label>
+                <input type="number" id="timerAddFollow" value="10">
+              </div>
+              <div class="col">
+                <label>+Detik per Diamond</label>
+                <input type="number" id="timerAddDiamond" value="2">
+              </div>
+            </div>
+            <button class="btn btn-indigo" onclick="saveSettings()">💾 Simpan Aturan Timer</button>
+          </div>
+
+          <!-- TAB POLLING -->
+          <div class="tab-content" id="tabPoll">
+            <div class="col">
+              <label>Pertanyaan Polling (Penonton ketik !1, !2, !3 di chat)</label>
+              <input type="text" id="pollQuestion" value="Main game apa selanjutnya?">
+            </div>
+            <div class="col">
+              <label>Opsi Jawaban (pisahkan dengan koma)</label>
+              <input type="text" id="pollOptions" value="Mobile Legends, PUBG Mobile, Valorant">
+            </div>
+            <div class="row">
+              <button class="btn btn-green" style="flex:1;" onclick="startPoll()">▶ Mulai Poll</button>
+              <button class="btn btn-primary" style="flex:1;" onclick="socket.emit('poll-control',{action:'stop'})">⏹ Tutup Poll</button>
+            </div>
+            <button class="btn btn-secondary" onclick="socket.emit('poll-control',{action:'reset'})">↺ Reset Suara</button>
+          </div>
+
+          <!-- TAB GOALS -->
+          <div class="tab-content" id="tabGoals">
+            <div class="col"><label>Target Likes</label><input type="number" id="goalLikes" value="10000"></div>
+            <div class="col"><label>Target Follower Baru</label><input type="number" id="goalFollowers" value="100"></div>
+            <div class="col"><label>Target Diamonds</label><input type="number" id="goalDiamonds" value="1000"></div>
+            <button class="btn btn-indigo" onclick="saveSettings()">💾 Simpan Target Goal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let currentRules = [];
+
+    // Audio Synthesizer bawaan (Zero external audio files needed!)
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let actx = null;
+
+    function playSynthSound(name) {
+      if (!document.getElementById('dashAudioEnable').checked) return;
+      if (!actx) actx = new AudioCtx();
+      if (actx.state === 'suspended') actx.resume();
+      const now = actx.currentTime;
+
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.connect(gain);
+      gain.connect(actx.destination);
+
+      if (name === 'coin') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(987.77, now);
+        osc.frequency.setValueAtTime(1318.51, now + 0.08);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.start(now); osc.stop(now + 0.35);
+      } else if (name === 'chime') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.1);
+        osc.frequency.setValueAtTime(783.99, now + 0.2);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.start(now); osc.stop(now + 0.5);
+      } else if (name === 'airhorn') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(205, now + 0.45);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.start(now); osc.stop(now + 0.5);
+      } else if (name === 'sad') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.setValueAtTime(280, now + 0.25);
+        osc.frequency.setValueAtTime(250, now + 0.5

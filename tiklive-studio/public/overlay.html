@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikLive Overlay</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: #fff; position: relative; }
+
+    .goal-container { position: absolute; top: 18px; left: 20px; display: flex; gap: 12px; }
+    .goal-card { background: rgba(15, 18, 28, 0.85); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 8px 14px; min-width: 185px; backdrop-filter: blur(8px); }
+    .goal-title { font-size: 0.78rem; color: #cbd5e1; display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 700; }
+    .bar-bg { height: 8px; background: rgba(255,255,255,0.12); border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, #25f4ee, #fe2c55); width: 0%; transition: width 0.4s ease; }
+
+    .timer-box { position: absolute; top: 18px; right: 22px; background: rgba(15, 18, 28, 0.88); border: 2px solid #25f4ee; border-radius: 14px; padding: 10px 20px; text-align: center; }
+    .timer-label { font-size: 0.7rem; letter-spacing: 1px; color: #25f4ee; font-weight: 700; }
+    .timer-val { font-size: 2rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+    .leaderboard-box { position: absolute; top: 115px; right: 22px; width: 240px; background: rgba(15, 18, 28, 0.84); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 10px 12px; }
+    .lb-title { font-size: 0.8rem; font-weight: 800; color: #fbbf24; margin-bottom: 8px; }
+    .lb-row { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+    .poll-box { position: absolute; bottom: 24px; right: 22px; width: 300px; background: rgba(15, 18, 28, 0.88); border: 1px solid #6366f1; border-radius: 12px; padding: 12px 14px; display: none; }
+    .poll-q { font-weight: 800; font-size: 0.9rem; margin-bottom: 8px; color: #a5b4fc; }
+    .poll-opt { margin-bottom: 7px; font-size: 0.8rem; }
+    .poll-opt-head { display: flex; justify-content: space-between; margin-bottom: 3px; }
+    .poll-bar-fill { height: 7px; background: #6366f1; border-radius: 99px; transition: width 0.3s; }
+
+    .chat-box { position: absolute; bottom: 22px; left: 20px; width: 340px; max-height: 260px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; overflow: hidden; }
+    .chat-msg { background: rgba(15, 18, 28, 0.78); padding: 7px 12px; border-radius: 10px; font-size: 0.85rem; border-left: 3px solid #25f4ee; }
+
+    .alert-popup {
+      position: absolute; top: 26%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
+      background: linear-gradient(135deg, rgba(20, 23, 38, 0.96), rgba(45, 18, 46, 0.96));
+      border: 2px solid #fe2c55; border-radius: 18px; padding: 16px 28px; text-align: center;
+      box-shadow: 0 10px 40px rgba(254, 44, 85, 0.55); opacity: 0; pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 50; max-width: 90vw;
+    }
+    .alert-popup.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .alert-title { font-size: 1.35rem; font-weight: 900; color: #25f4ee; }
+    .alert-sub { font-size: 1rem; margin-top: 4px; font-weight: 600; }
+
+    .wheel-modal {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.85);
+      background: rgba(12, 14, 22, 0.94); border: 2px solid #fbbf24; border-radius: 20px; padding: 18px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; pointer-events: none; transition: 0.35s; z-index: 60;
+    }
+    .wheel-modal.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .wheel-pointer { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 24px solid #fe2c55; margin-bottom: -10px; z-index: 2; }
+
+    /* MODE MOBILE / VERTIKAL 9:16 */
+    body.mobile-mode .goal-container { top: 10px; left: 10px; right: 10px; flex-wrap: wrap; gap: 6px; }
+    body.mobile-mode .goal-card { flex: 1; min-width: 100px; padding: 6px 8px; }
+    body.mobile-mode .goal-title { font-size: 0.65rem; }
+    body.mobile-mode .timer-box { top: 68px; right: 10px; padding: 6px 12px; }
+    body.mobile-mode .timer-val { font-size: 1.25rem; }
+    body.mobile-mode .leaderboard-box { top: 135px; right: 10px; width: 170px; padding: 8px; }
+    body.mobile-mode .chat-box { left: 10px; bottom: 14px; width: 62%; max-height: 200px; }
+    body.mobile-mode .poll-box { right: 10px; bottom: 225px; left: 10px; width: auto; }
+    body.mobile-mode #wheelCanvas { max-width: 78vw; height: auto; }
+  </style>
+</head>
+<body>
+
+  <div class="goal-container" id="wGoals">
+    <div class="goal-card"><div class="goal-title"><span>❤️ Likes</span><span id="gLikeText">0 / 10000</span></div><div class="bar-bg"><div class="bar-fill" id="gLikeBar"></div></div></div>
+    <div class="goal-card"><div class="goal-title"><span>➕ Follow</span><span id="gFollowText">0 / 100</span></div><div class="bar-bg"><div class="bar-fill" id="gFollowBar"></div></div></div>
+    <div class="goal-card"><div class="goal-title"><span>💎 Coin</span><span id="gDiamondText">0 / 1000</span></div><div class="bar-bg"><div class="bar-fill" id="gDiamondBar"></div></div></div>
+  </div>
+
+  <div class="timer-box" id="wTimer">
+    <div class="timer-label">LIVE TIMER</div>
+    <div class="timer-val" id="timerText">05:00</div>
+  </div>
+
+  <div class="leaderboard-box" id="wLeaderboard">
+    <div class="lb-title">🏆 TOP GIFTERS</div>
+    <div id="lbList"><div style="font-size:0.75rem; color:#9ca3af;">Belum ada gift</div></div>
+  </div>
+
+  <div class="chat-box" id="wChat"></div>
+
+  <div class="poll-box" id="wPoll">
+    <div class="poll-q" id="pollQ">Polling</div>
+    <div id="pollOpts"></div>
+  </div>
+
+  <div class="alert-popup" id="alertPopup">
+    <div class="alert-title" id="alertTitle">🎁 GIFT BARU!</div>
+    <div class="alert-sub" id="alertSub">User mengirim Rose</div>
+  </div>
+
+  <div class="wheel-modal" id="wheelModal">
+    <div id="wheelTriggerText" style="font-weight:800; color:#25f4ee;">🎡 RODA KEBERUNTUNGAN!</div>
+    <div class="wheel-pointer"></div>
+    <canvas id="wheelCanvas" width="340" height="340"></canvas>
+    <div id="wheelResult" style="font-size:1.15rem; font-weight:900; color:#fbbf24; min-height:26px;"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    if (location.search.includes('mode=mobile') || window.innerWidth < 768) {
+      document.body.classList.add('mobile-mode');
+    }
+
+    const socket = io();
+    const alertQueue = [];
+    let isShowingAlert = false;
+
+    function enqueueAlert(title, sub) {
+      alertQueue.push({ title, sub });
+      if (!isShowingAlert) processAlertQueue();
+    }
+    function processAlertQueue() {
+      if (!alertQueue.length) { isShowingAlert = false; return; }
+      isShowingAlert = true;
+      const item = alertQueue.shift();
+      const el = document.getElementById('alertPopup');
+      document.getElementById('alertTitle').textContent = item.title;
+      document.getElementById('alertSub').textContent = item.sub;
+      el.classList.add('show');
+      setTimeout(() => { el.classList.remove('show'); setTimeout(processAlertQueue, 400); }, 3200);
+    }
+
+    function formatTimer(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    const wCanvas = document.getElementById('wheelCanvas');
+    const wCtx = wCanvas.getContext('2d');
+    const colors = ['#fe2c55', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#0ea5e9'];
+    let currentAngle = 0;
+
+    function drawWheel(items, angleOffset) {
+      const cx = 170, cy = 170, r = 160;
+      const slice = (Math.PI * 2) / items.length;
+      wCtx.clearRect(0, 0, 340, 340);
+      items.forEach((label, i) => {
+        const start = angleOffset + i * slice;
+        wCtx.beginPath(); wCtx.moveTo(cx, cy); wCtx.arc(cx, cy, r, start, start + slice);
+        wCtx.fillStyle = colors[i % colors.length]; wCtx.fill();
+        wCtx.strokeStyle = '#0b0d14'; wCtx.lineWidth = 3; wCtx.stroke();
+        wCtx.save(); wCtx.translate(cx, cy); wCtx.rotate(start + slice / 2);
+        wCtx.textAlign = 'right'; wCtx.fillStyle = '#fff'; wCtx.font = 'bold 14px Segoe UI';
+        wCtx.fillText(label.slice(0, 18), r - 14, 5);
+        wCtx.restore();
+      });
+    }
+
+    socket.on('spin-wheel', ({ winnerIndex, winnerText, triggeredBy, items }) => {
+      const modal = document.getElementById('wheelModal');
+      document.getElementById('wheelTriggerText').textContent = `🎡 Diputar oleh ${triggeredBy}!`;
+      document.getElementById('wheelResult').textContent = '';
+      modal.classList.add('show');
+
+      const slice = (Math.PI * 2) / items.length;
+      const targetAngle = -Math.PI / 2 - (winnerIndex * slice + slice / 2) + Math.PI * 2 * 6;
+      const startAngle = currentAngle % (Math.PI * 2);
+      const startTime = performance.now();
+
+      function animateWheel(now) {
+        const t = Math.min(1, (now - startTime) / 4200);
+        const ease = 1 - Math.pow(1 - t, 4);
+        drawWheel(items, startAngle + (targetAngle - startAngle) * ease);
+        if (t < 1) requestAnimationFrame(animateWheel);
+        else {
+          currentAngle = targetAngle;
+          document.getElementById('wheelResult').textContent = `🎉 HASIL: ${winnerText}`;
+          setTimeout(() => modal.classList.remove('show'), 3200);
+        }
+      }
+      requestAnimationFrame(animateWheel);
+    });
+
+    socket.on('state-sync', s => {
+      const w = s.overlayWidgets;
+      document.getElementById('wGoals').style.display = w.showGoals ? 'flex' : 'none';
+      document.getElementById('wTimer').style.display = w.showTimer ? 'block' : 'none';
+      document.getElementById('wLeaderboard').style.display = w.showLeaderboard ? 'block' : 'none';
+      document.getElementById('wChat').style.display = w.showChat ? 'flex' : 'none';
+
+      document.getElementById('gLikeText').textContent = `${s.stats.likes}/${s.goals.likeGoal}`;
+      document.getElementById('gLikeBar').style.width = `${Math.min(100, (s.stats.likes / s.goals.likeGoal) * 100)}%`;
+      document.getElementById('gFollowText').textContent = `${s.stats.followers}/${s.goals.followerGoal}`;
+      document.getElementById('gFollowBar').style.width = `${Math.min(100, (s.stats.followers / s.goals.followerGoal) * 100)}%`;
+      document.getElementById('gDiamondText').textContent = `${s.stats.diamonds}/${s.goals.diamondGoal}`;
+      document.getElementById('gDiamondBar').style.width = `${Math.min(100, (s.stats.diamonds / s.goals.diamondGoal) * 100)}%`;
+      document.getElementById('timerText').textContent = formatTimer(s.timer.seconds);
+
+      const lb = document.getElementById('lbList');
+      lb.innerHTML = s.leaderboard.length
+        ? s.leaderboard.map((u, i) => `<div class="lb-row"><span>#${i + 1} ${u.nickname}</span><span>💎 ${u.diamonds}</span></div>`).join('')
+        : '<div style="font-size:0.75rem; color:#9ca3af;">Belum ada gift</div>';
+
+      const pollBox = document.getElementById('wPoll');
+      if (w.showPoll && s.poll.active) {
+        pollBox.style.display = 'block';
+        document.getElementById('pollQ').textContent = `${s.poll.question} (Ketik !1, !2...)`;
+        const total = s.poll.options.reduce((a, b) => a + b.votes, 0) || 1;
+        document.getElementById('pollOpts').innerHTML = s.poll.options.map(o => {
+          const pct = Math.round((o.votes / total) * 100);
+          return `<div class="poll-opt"><div class="poll-opt-head"><span><b>${o.key}</b> ${o.label}</span><span>${o.votes} (${pct}%)</span></div><div class="bar-bg"><div class="poll-bar-fill" style="width:${pct}%"></div></div></div>`;
+        }).join('');
+      } else {
+        pollBox.style.display = 'none';
+      }
+    });
+
+    socket.on('timer-tick', t => { document.getElementById('timerText').textContent = formatTimer(t.seconds); });
+    socket.on('tiktok-chat', d => {
+      const box = document.getElementById('wChat');
+      const div = document.createElement('div');
+      div.className = 'chat-msg';
+      div.innerHTML = `<b style="color:#25f4ee;">${d.nickname}:</b> ${d.comment}`;
+      box.appendChild(div);
+      if (box.children.length > 7) box.firstChild.remove();
+    });
+    socket.on('tiktok-gift', d => enqueueAlert(`🎁 ${d.nickname}`, `Mengirim ${d.count}x ${d.giftName} (+${d.diamonds} 💎)`));
+    socket.on('tiktok-follow', d => enqueueAlert(`➕ FOLLOWER BARU!`, `Terima kasih ${d.nickname} sudah follow!`));
+  </script>
+</body>
+</html>
